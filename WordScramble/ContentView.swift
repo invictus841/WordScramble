@@ -19,9 +19,13 @@ struct ContentView: View {
     // Word you type
     @State private var newWord = ""
     
+    // Alert related
     @State private var errorTitle = ""
     @State private var errorMessage = ""
     @State private var showingError = false
+    
+    // Score related
+    @State private var score = 0
     
     // MARK: - BODY
     var body: some View {
@@ -40,22 +44,43 @@ struct ContentView: View {
                         }
                     }
                 }
-
             } //: LIST
             .navigationTitle(rootWord)
             .onSubmit(addNewWord)
             .onAppear(perform: startGame)
+            .toolbar {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    Button("New word", action: startGame)
+                }
+            }
             .alert(errorTitle, isPresented: $showingError) {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
+            }
+            .safeAreaInset(edge: .bottom) {
+                Text("Score: \(score)")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(.blue)
+                    .foregroundColor(.white)
+                    .font(.title)
             }
         } //: NAVIGATION
     }
     
     func addNewWord() {
         let answer = newWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        guard answer.count > 0 else { return }
+        
+        guard answer.count > 2 else {
+            wordError(title: "Word too short", message: "Word should be greater than two letters")
+            return
+        }
+        
+        guard answer != rootWord else {
+            wordError(title: "Stop cheating bro", message: "You can't type the same word as the root word..")
+            return
+        }
         
         guard isOriginal(word: answer) else {
             wordError(title: "Word used already", message: "Be more original")
@@ -72,14 +97,19 @@ struct ContentView: View {
             return
         }
         
+        
+        
         withAnimation {
             usedWords.insert(answer, at: 0)
         }
         
         newWord = ""
+        score += answer.count
     }
     
     func startGame() {
+        newWord = ""
+        usedWords.removeAll()
         if let startWordsURL = Bundle.main.url(forResource: "start", withExtension: ".txt") {
             if let startWords = try? String(contentsOf: startWordsURL) {
                 let allWords = startWords.components(separatedBy: "\n")
